@@ -9,12 +9,14 @@ Start:      call Main
             int 21h
 
 ;-------------------------------------------------------------------------------------------------------
+
 Main        proc
 
             xor bx, bx
             call PasswordRequest
 
             mov cx, BUFFER_SIZE
+            add cx, 2
             mov dx, offset InputBuffer
             call CheckInput
 
@@ -61,6 +63,27 @@ CheckInput          proc
                     xor di, di
                     mov bx, dx
 
+                    call EncryptPassword
+
+                    mov si, dx
+                    mov di, offset CorrectResult
+                    pop cx
+                    push ds
+                    pop es
+                    cld                         ; Clear direction flag to up
+                    call CheckPassword
+
+                    ret
+                    endp
+
+;-------------------------------------------------------------------------------------------------------
+;Encrypt password: XOR buffer[i] with buffer[i-1] (firstly buffer[0] with last buffer element)
+;Arguments: CX = number of elements in buffer, AX = last number of index in buffer, DI = 0, BX = address of buffer
+;Return value: BX = address of buffer with hash, CX = 0
+;Destroy: AX, SI, DI
+;-------------------------------------------------------------------------------------------------------
+EncryptPassword     proc
+
 @@Cycle:            mov si, di
                     test di, di 
                     je @@Cycle_2
@@ -77,15 +100,7 @@ CheckInput          proc
                     inc di
                     loop @@Cycle
 
-@@Next:             mov si, dx
-                    mov di, offset CorrectResult
-                    pop cx
-                    push ds
-                    pop es
-                    cld                         ; Clear direction flag to up
-                    call CheckPassword
-
-                    ret
+@@Next:             ret
                     endp
 
 ;-------------------------------------------------------------------------------------------------------
@@ -98,7 +113,9 @@ CheckPassword       proc
 
                     push cx
                     repe cmpsb                  ; while (CX != 0 && ZF == 0) SI++ DI++; (cmp DS:[SI] and  ES:[DI])
-                    jne @@IfWrongPassword       ; ZF == 1 => difference found
+                    jmp @@BufferSkip
+                    InputBuffer db 4096 dup(?)
+@@BufferSkip:       jne @@IfWrongPassword       ; ZF == 1 => difference found
 
                     mov ah, 09h
                     mov dx, offset SuccessMessage
@@ -113,11 +130,6 @@ CheckPassword       proc
                     mov ah, 02h
                     xor di, di
 
-@@Cycle_3:          mov dl, [bx + di]
-                    int 21h
-                    inc di
-                    loop @@Cycle_3
-
                     ret
                     endp
 ;-------------------------------------------------------------------------------------------------------
@@ -125,7 +137,6 @@ CheckPassword       proc
 BUFFER_SIZE     equ 4096
 
 RequestStr      db 'Please, enter password', 0dh, 0ah, '$'
-InputBuffer     db 4096 dup(?)
 
 SuccessMessage  db 'Access granted', 0dh, 0ah, '$'
 FailureMessage  db 'Access denied', 0dh, 0ah, '$'
