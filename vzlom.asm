@@ -3,7 +3,8 @@
 org 100h
 
 ;-------------------------------------------------------------------------------------------------------
-Start:      call Main
+Start:      mov sp, 8000h
+            call Main
 
             mov ax, 4c00h       ; Terminate
             int 21h
@@ -15,8 +16,8 @@ Main        proc
             xor bx, bx
             call PasswordRequest
 
-            mov cx, BUFFER_SIZE
-            add cx, 2
+            xor cx, cx
+            dec cx
             mov dx, offset InputBuffer
             call CheckInput
 
@@ -53,13 +54,10 @@ PasswordRequest         proc
 ;-------------------------------------------------------------------------------------------------------
 CheckInput          proc
 
-                    xor bx, bx                  ; BX = standart output handle
-                    mov ah, 3fh
-                    int 21h                     ; Read file, AX = number of bytes actually read
+                    call ReadFile
 
                     mov cx, ax                  ; Number of cycles = number of symbols in input
                     sub ax, 1                   ; AX = last number of index in InputBuffer
-                    push cx
                     xor di, di
                     mov bx, dx
 
@@ -67,11 +65,25 @@ CheckInput          proc
 
                     mov si, dx
                     mov di, offset CorrectResult
-                    pop cx
                     push ds
                     pop es
                     cld                         ; Clear direction flag to up
+                    mov cx, CORRECT_LENGTH
                     call CheckPassword
+
+                    ret
+                    endp
+
+;-------------------------------------------------------------------------------------------------------
+;Read file to input buffer.
+;Arguments: BX = file handle, CX = max number of bytes to read, DX = address of buffer to receive data
+;Return value: AX = number of bytes actually read
+;Destroy: -
+;-------------------------------------------------------------------------------------------------------
+ReadFile            proc
+
+                    mov ah, 3fh
+                    int 21h
 
                     ret
                     endp
@@ -79,8 +91,8 @@ CheckInput          proc
 ;-------------------------------------------------------------------------------------------------------
 ;Encrypt password: XOR buffer[i] with buffer[i-1] (firstly buffer[0] with last buffer element)
 ;Arguments: CX = number of elements in buffer, AX = last number of index in buffer, DI = 0, BX = address of buffer
-;Return value: BX = address of buffer with hash, CX = 0
-;Destroy: AX, SI, DI
+;Return value: BX = address of buffer with hash
+;Destroy: AX, SI, DI, CX
 ;-------------------------------------------------------------------------------------------------------
 EncryptPassword     proc
 
@@ -105,19 +117,16 @@ EncryptPassword     proc
 
 ;-------------------------------------------------------------------------------------------------------
 ;Compares InputBuffer and CorrectResult. Output FailureMessage or SuccessMessage to console.
-;Arguments: DF = 0 (for SI++ and DI++), ES = DS, CX = number of bytes to read, SI and DI = cmp strings offsets
+;Arguments: DF = 0 (for SI++ and DI++), ES = DS, CX = number of bytes to compare, SI and DI = cmp strings offsets
 ;Return value: DX = offset 'output_message'
 ;Destroy: AX, CX, SI, DI
 ;-------------------------------------------------------------------------------------------------------
 CheckPassword       proc
 
-                    push cx
                     repe cmpsb                  ; while (CX != 0 && ZF == 0) SI++ DI++; (cmp DS:[SI] and  ES:[DI])
-                    jmp @@BufferSkip
-                    InputBuffer db 4096 dup(?)
-@@BufferSkip:       jne @@IfWrongPassword       ; ZF == 1 => difference found
+                    jne @@IfWrongPassword       ; ZF == 1 => difference found
 
-                    mov ah, 09h
+                    mov ah, 09h                     ;AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA
                     mov dx, offset SuccessMessage
                     int 21h
                     jmp @@AfterMessage
@@ -126,21 +135,21 @@ CheckPassword       proc
                     mov dx, offset FailureMessage
                     int 21h
 
-@@AfterMessage:     pop cx
-                    mov ah, 02h
+@@AfterMessage:     mov ah, 02h
                     xor di, di
 
                     ret
                     endp
-;-------------------------------------------------------------------------------------------------------
 
-BUFFER_SIZE     equ 4096
+;-------------------------------------------------------------------------------------------------------
+CORRECT_LENGTH equ 15
 
 RequestStr      db 'Please, enter password', 0dh, 0ah, '$'
 
 SuccessMessage  db 'Access granted', 0dh, 0ah, '$'
 FailureMessage  db 'Access denied', 0dh, 0ah, '$'
 
+InputBuffer     db 4096 dup(?)
 CorrectResult   db 67h, 0eh, 5dh, 35h, 74h, 1fh, 70h, 26h, 47h, 2bh, 74h, 31h, 47h, 4ah, 40h
 
 EndOfProgram:
