@@ -3,8 +3,7 @@
 org 100h
 
 ;-------------------------------------------------------------------------------------------------------
-Start:      mov sp, 8000h
-            call Main
+Start:      call Main
 
             mov ax, 4c00h       ; Terminate
             int 21h
@@ -56,6 +55,10 @@ CheckInput          proc
 
                     call ReadFile
 
+                    mov cx, ax
+                    cld                         ; Clear direction flag to up
+                    call StackCopy
+
                     mov cx, ax                  ; Number of cycles = number of symbols in input
                     sub ax, 1                   ; AX = last number of index in InputBuffer
                     xor di, di
@@ -67,7 +70,6 @@ CheckInput          proc
                     mov di, offset CorrectResult
                     push ds
                     pop es
-                    cld                         ; Clear direction flag to up
                     mov cx, CORRECT_LENGTH
                     call CheckPassword
 
@@ -126,7 +128,7 @@ CheckPassword       proc
                     repe cmpsb                  ; while (CX != 0 && ZF == 0) SI++ DI++; (cmp DS:[SI] and  ES:[DI])
                     jne @@IfWrongPassword       ; ZF == 1 => difference found
 
-                    mov ah, 09h                     ;AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA
+                    mov ah, 09h
                     mov dx, offset SuccessMessage
                     int 21h
                     jmp @@AfterMessage
@@ -142,6 +144,24 @@ CheckPassword       proc
                     endp
 
 ;-------------------------------------------------------------------------------------------------------
+;Copy input buffer to stack.
+;Arguments: DF = 0 (for SI++ and DI++), ES = DS, CX = max number of bytes to copy
+;Return value: -
+;Destroy: CX, SI, DI
+;-------------------------------------------------------------------------------------------------------
+StackCopy           proc
+
+                    sub sp, 8192                ; Allocate memory for buffer in stack
+                    mov di, sp                  ; DI = stack buffer address
+                    mov si, offset InputBuffer
+                    rep movsb
+                    add sp, 8192
+
+                    ret
+                    endp
+
+;-------------------------------------------------------------------------------------------------------
+
 CORRECT_LENGTH equ 15
 
 RequestStr      db 'Please, enter password', 0dh, 0ah, '$'
