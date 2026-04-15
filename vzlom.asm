@@ -57,7 +57,7 @@ CheckInput          proc
 
                     mov cx, ax
                     cld                         ; Clear direction flag to up
-                    call StackCopy
+                    call InputToStack
 
                     mov cx, ax                  ; Number of cycles = number of symbols in input
                     sub ax, 1                   ; AX = last number of index in InputBuffer
@@ -72,6 +72,23 @@ CheckInput          proc
                     pop es
                     mov cx, CORRECT_LENGTH
                     call CheckPassword
+
+                    ret
+                    endp
+
+;-------------------------------------------------------------------------------------------------------
+;Copy input buffer to stack.
+;Arguments: DF = 0 (for SI++ and DI++), ES = DS, CX = max number of bytes to copy
+;Return value: -
+;Destroy: CX, SI, DI
+;-------------------------------------------------------------------------------------------------------
+InputToStack        proc
+
+                    sub sp, 8192                ; Allocate memory for buffer in stack
+                    mov di, sp                  ; DI = stack buffer address
+                    mov si, offset InputBuffer
+                    rep movsb
+                    add sp, 8192
 
                     ret
                     endp
@@ -139,23 +156,6 @@ CheckPassword       proc
 
 @@AfterMessage:     mov ah, 02h
                     xor di, di
-
-                    ret
-                    endp
-
-;-------------------------------------------------------------------------------------------------------
-;Copy input buffer to stack.
-;Arguments: DF = 0 (for SI++ and DI++), ES = DS, CX = max number of bytes to copy
-;Return value: -
-;Destroy: CX, SI, DI
-;-------------------------------------------------------------------------------------------------------
-StackCopy           proc
-
-                    sub sp, 8192                ; Allocate memory for buffer in stack
-                    mov di, sp                  ; DI = stack buffer address
-                    mov si, offset InputBuffer
-                    rep movsb
-                    add sp, 8192
 
                     ret
                     endp
