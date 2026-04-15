@@ -14,8 +14,7 @@ Main        proc
 
             mov ah, 40h
             mov bx, 1h
-            mov cx, 37h
-            inc cx
+            mov cx, 0fc86h
 
             mov dx, offset FileBuffer
             int 21h
@@ -25,8 +24,7 @@ Main        proc
 
 ;-------------------------------------------------------------------------------------------------------
 
-FileBuffer db 36h dup (00h) 
-           db 0dh
+FileBuffer db 0fc83h dup (00h), 39h, 01h, 0dh
 
 EndOfProgram:
 end         Start

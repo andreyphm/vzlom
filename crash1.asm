@@ -24,7 +24,7 @@ Main        proc
 
 ;-------------------------------------------------------------------------------------------------------
 
-FileBuffer db 15 dup (00h), 4080 dup(90h), 16 dup (00h);, 68h, 01h, 68h, 01h, 68h, 01h;, 0DFh, 01h, 0A4h, 19h, 32h, 0FEh, 68h, 01h;, 00h, 00h, 0C6h, 01h, 87h, 52h;, 0DFh, 01h, 0A4h, 19h, 28h, 0FEh, 43h, 01h, 88h, 52h, 02h, 32h, 02h, 32h
+FileBuffer db 15 dup (00h), 4080 dup(90h), 16 dup (00h)
 
 EndOfProgram:
 end         Start
